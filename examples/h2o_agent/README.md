@@ -9,6 +9,51 @@
 
 使用者可以藉由命令列參數自由設定流程、資料路徑、目標欄位與訓練參數，並可根據需求採用自動化（AutoML）或手動模式進行模型訓練。此外，當啟用深度解釋功能時，系統將利用 LiteLLM 提供詳細的預測解釋。
 
+## 程式架構圖
+
+```mermaid
+graph TD
+  subgraph CLI Script
+    A[main.py<br/>(命令列入口)]
+    B[run_full_integration.py<br/>(整合流程)]
+    C[run_h2o.py<br/>(單純預測)]
+    D[run_h2o_automl.py<br/>(AutoML 與工具整合)]
+  end
+
+  subgraph Core Modules
+    E[H2OAgent<br/>(agents/h2o_agent.py)]
+    F[h2o_explain_tool<br/>(tools/h2o_explain_tool.py)]
+  end
+
+  subgraph Utility & 外部套件
+    G[dotenv<br/>(環境變數)]
+    H[argparse, logging, json<br/>(指令解析與紀錄)]
+    I[H2O‑3 Library]
+    J[LiteLLM / DeepSeek‑R1<br/>(生成解釋)]
+    K[smolagents<br/>(工具包與多步驟流程)]
+  end
+
+  %% 入口層與工具
+  A --> H
+  A --> G
+  A --> E
+  A --> F
+
+  B --> E
+  B --> K
+  B --> F
+
+  C --> E
+
+  D --> E
+  D --> K
+
+  %% 核心模組與外部套件連接
+  E --> I
+  F --> J
+  F --> K
+```
+
 ## 目錄結構
 
 ```
@@ -98,4 +143,4 @@ python examples/h2o_agent/main.py --mode explain --test_data path/to/test.csv --
 ## 授權條款
 本專案遵循 MIT 授權條款，詳情請參閱 LICENSE 檔案。
 
----
+
