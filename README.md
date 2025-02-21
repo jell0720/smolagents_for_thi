@@ -154,7 +154,7 @@ You can run agents from CLI using two commands: `smolagent` and `webagent`.
 smolagent "Plan a trip to Tokyo, Kyoto and Osaka between Mar 28 and Apr 7."  --model-type "HfApiModel" --model-id "Qwen/Qwen2.5-Coder-32B-Instruct" --imports "pandas numpy" --tools "web_search"
 ```
 
-Meanwhile `webagent` is a specific web-browsing agent using [helium](https://github.com/mherrmann/helium) (read more [here](https://github.com/huggingface/smolagents/blob/main/src/smolagents/vision_web_browser.py)).
+Meanwhile `webagent` is a specific web-browsing agent using [helium](https://github.com/mherrmann/helium) (read more [here](https://github.com/huggingface/smolagents/blob/main/src/smolagents/vision_web_browser.py)).
 
 For instance:
 ```bash
@@ -240,3 +240,198 @@ If you use `smolagents` in your publication, please cite it by using the followi
   year =         {2025}
 }
 ```
+
+# H2O Agent 與深度解釋工具整合專案
+
+此專案整合了 H2O‑3 與 LiteLLMModel，提供一個端到端的流程來執行模型訓練、預測以及對預測結果進行詳細的原因分析與解釋。系統支援以下模式：
+
+- **full**：完整流程（訓練 → 預測 → (可選) 深度解釋）
+- **train**：僅進行模型訓練
+- **predict**：僅進行預測
+- **explain**：僅針對現有預測結果進行深度解釋
+
+---
+
+## 專案結構
+
+- **examples/h2o_agent/main.py**  
+  主要應用程式，負責解析命令列參數，依據使用者設定選擇執行模式並呼叫相應流程。  
+  - 引用 [`agents/h2o_agent.py`](./agents/h2o_agent.py) 中的 `H2OAgent` 來操作 H2O‑3 模型訓練及預測
+  - 根據需要，可選擇呼叫 [`tools/h2o_explain_tool.py`](./tools/h2o_explain_tool.py) 來生成詳細解釋
+
+- **examples/h2o_agent/agents/h2o_agent.py**  
+  封裝了 H2O‑3 的高階操作接口，包括：
+  - 資料載入
+  - 自動（AutoML）與手動模型訓練
+  - 預測
+  - 簡單的模型解釋（例如特徵重要性）
+
+- **examples/h2o_agent/tools/h2o_explain_tool.py**  
+  利用 LiteLLMModel 生成針對 H2O‑3 預測結果的詳細文字解釋，目前已棄用 deepseek.py，改以輕量型語言模型實現生成。
+
+---
+
+## 安裝與環境設定
+
+1. **確認環境：**
+
+   - Python 版本需 3.7 以上
+   - 建議使用虛擬環境
+
+2. **建立虛擬環境（可選）：**
+
+   ```bash
+   python -m venv venv
+   source venv/bin/activate   # Linux/MacOS
+   venv\Scripts\activate      # Windows
+   ```
+
+3. **安裝相依套件：**
+
+   請確保已安裝以下 Python 套件：
+   - h2o
+   - python-dotenv
+   - smolagents
+   - litellm
+
+   例如，可使用 pip 安裝：
+   ```bash
+   pip install h2o python-dotenv smolagents litellm
+   ```
+
+4. **環境變數設定：**
+
+   建立一個 `.env` 檔案，並根據需求設定：
+   - `LLM_API_BASE`：LiteLLMModel 的 API 端點（若需要使用）
+   - `LLM_API_KEY`：API 金鑰（若需要使用）
+   - `LLM_MODEL_ID`：LLM 模型識別碼（預設為 `gpt-3.5-turbo`）
+
+---
+
+## 使用說明
+
+本專案主要以命令列方式執行，可透過調整參數來選擇不同的模式與設定。
+
+### 命令列參數
+
+- `--mode`  
+  執行模式，選項：
+  - `full`：完整流程（訓練 → 預測 → (可選) 深度解釋）
+  - `train`：僅進行模型訓練
+  - `predict`：僅進行預測
+  - `explain`：僅進行解釋  
+  (預設為 `full`)
+
+- `--method`  
+  訓練方式，選項：
+  - `automl`：自動化訓練（預設）
+  - `manual`：手動設定訓練參數
+
+- `--train_data`  
+  訓練資料 CSV 檔案路徑
+
+- `--test_data`  
+  測試資料 CSV 檔案路徑
+
+- `--target`  
+  目標欄位名稱
+
+- `--params`  
+  手動訓練參數（JSON 格式），例如：
+  ```json
+  {"ntrees": 100, "max_depth": 5}
+  ```
+
+- `--max_runtime`  
+  AutoML 最大運行秒數（預設 3600 秒）
+
+- `--model_id`  
+  模型識別碼（用於預測或解釋模式）
+
+- `--explain`  
+  加入此參數表示需要針對預測結果生成深度解釋
+
+### 範例命令
+
+1. **完整流程**（訓練 → 預測 → 深度解釋）：
+   ```bash
+   python examples/h2o_agent/main.py --mode full --train_data path/to/train.csv --test_data path/to/test.csv --target target_column --explain
+   ```
+
+2. **僅進行模型訓練（自動化）**：
+   ```bash
+   python examples/h2o_agent/main.py --mode train --method automl --train_data path/to/train.csv --target target_column
+   ```
+
+3. **僅進行模型訓練（手動設定參數）**：
+   ```bash
+   python examples/h2o_agent/main.py --mode train --method manual --train_data path/to/train.csv --target target_column --params '{"ntrees": 100, "max_depth": 5}'
+   ```
+
+4. **僅進行預測**：
+   ```bash
+   python examples/h2o_agent/main.py --mode predict --test_data path/to/test.csv --model_id existing_model_id --explain
+   ```
+
+5. **僅針對預測結果生成深度解釋**：
+   ```bash
+   python examples/h2o_agent/main.py --mode explain --test_data path/to/test.csv --model_id existing_model_id
+   ```
+
+---
+
+## 主要模組介紹
+
+### `examples/h2o_agent/main.py`
+- **功能說明：**  
+  負責解析命令列參數，根據設定選擇運行模式來執行模型訓練、預測及解釋流程。
+- **主要流程：**  
+  1. 載入環境變數（例如 .env 設定）
+  2. 初始化 H2O 群集與 `H2OAgent`
+  3. 根據 `--mode` 參數選擇適當流程：
+     - 訓練（`train`）
+     - 預測（`predict`）
+     - 解釋（`explain`）
+     - 完整流程（`full`）
+  4. 執行完畢後關閉 H2O 群集
+
+### `examples/h2o_agent/agents/h2o_agent.py`
+- **功能說明：**  
+  提供 H2O‑3 操作的高階封裝，包含：
+  - 資料載入：`load_data`
+  - 自動模型訓練：`train_model_auto`
+  - 手動模型訓練：`train_model_manual`
+  - 預測：`predict_model`
+  - 模型解釋：`explain_model`
+- **使用範例：**  
+  可在主程式中建立 `H2OAgent` 實例後，根據需求呼叫以上方法進行相應操作。
+
+### `examples/h2o_agent/tools/h2o_explain_tool.py`
+- **功能說明：**  
+  利用 LiteLLMModel 生成根據 H2O‑3 預測結果的詳細解釋。  
+- **核心接口：**  
+  - `h2o_explain_tool(prediction: str, max_tokens: int = 300)`  
+    根據傳入的預測結果生成自然語言解釋。
+- **備註：**  
+  此模組採用 smolagents 工具形式，並整合了輕量型語言模型生成功能。
+
+---
+
+## 注意事項
+
+- **相依環境：**  
+  執行前請先安裝所有必要的 Python 套件，並正確設定環境變數。
+  
+- **模型管理：**  
+  在使用預測與解釋模式時，請確保 `--model_id` 為已存在於 H2O 群集中的模型識別碼。
+
+- **資源釋放：**  
+  程式在結束前會自動呼叫 `h2o.shutdown(prompt=False)`，以確保 H2O 群集資源被釋放。
+
+---
+
+## 結語
+
+本專案旨在提供一個快速且方便的端到端平台，供使用者進行 H2O‑3 模型的訓練、預測以及生成深度解釋。若對專案有任何疑問或建議，歡迎提交 issue 與 pull request。
+
+Happy Coding!
