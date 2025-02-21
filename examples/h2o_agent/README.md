@@ -1,86 +1,133 @@
-# H2O & DeepSeek-R1 端到端整合
+
+# H2O Agent 與 DeepSeek‑R1 整合
 
 ## 簡介
-本專案提供了一個端到端的機器學習解決方案，結合了 **H2O-3**（AutoML 或手動訓練）與 **DeepSeek-R1**（自然語言解釋），可用於數據建模、預測以及模型結果解釋。
+本專案整合了 H2O‑3 與 DeepSeek‑R1，提供一個端到端機器學習流程，包含以下模式：
+- **full** : 完整流程（訓練 → 預測 → （可選）深度解釋）
+- **train** : 僅進行模型訓練
+- **predict** : 僅進行預測
+- **explain** : 僅對預測結果產生深度解釋
 
-## 功能
-- **完整流程 (full)**：執行模型訓練 → 預測 → 結果解釋
-- **模型訓練 (train)**：使用 AutoML 或手動設定參數訓練模型
-- **模型預測 (predict)**：使用已訓練的模型進行預測
-- **預測結果解釋 (explain)**：利用 DeepSeek-R1 模型為預測結果生成自然語言解釋
+使用者可以藉由命令列參數靈活設定流程、資料路徑、目標欄位以及訓練參數，並可選擇自動化（AutoML）或手動模式執行模型訓練。
 
-## 環境設定
-### 1. 安裝 Python 依賴套件
-請確保您的環境安裝了 **Python 3.8+**，並使用以下指令安裝必要的套件：
+## 目錄結構
+
+```
+examples/h2o_agent/
+├── main.py                  # 主入口程式，根據模式執行訓練、預測、或解釋任務
+├── agents/
+│   └── h2o_agent.py         # H2O‑3 操作接口：資料載入、模型訓練、預測與解釋
+└── tools/
+    ├── h2o_explain_tool.py  # DeepSeek‑R1 預測解釋工具包裝
+    └── deepseek.py          # 封裝 DeepSeek‑R1 推理功能（基於 Hugging Face transformers）
+```
+
+## 環境要求
+- Python 3.7 或更新版本
+- 必要模組：`h2o`、`python-dotenv`、`transformers`、`smolagents`
+
+## 安裝與設定
+1. **建立與啟動虛擬環境**
+
+   ```bash
+   python -m venv venv
+   # Linux / macOS
+   source venv/bin/activate
+   # Windows
+   venv\Scripts\activate
+   ```
+
+2. **安裝依賴套件**
+
+   ```bash
+   pip install h2o python-dotenv transformers smolagents
+   ```
+
+3. **設定環境變數（可選）**  
+   如有需要，可在專案根目錄新增 `.env` 檔案，放入相應的環境設定。
+
+## 使用方法
+本程式透過命令列參數決定執行模式與相關設定。主要參數說明如下：
+
+- `--mode`：選擇執行模式：
+  - `full`：完整流程（訓練 → 預測 → （可選）深度解釋）。
+  - `train`：僅進行模型訓練。
+  - `predict`：僅進行預測。
+  - `explain`：僅產生模型預測解釋。
+
+- `--method`：定義訓練模式：
+  - `automl`：使用 H2OAutoML 自動化訓練。
+  - `manual`：使用手動參數設定，預設使用 GBM 模型（可擴充其他算法）。
+
+- `--train_data`：訓練資料 CSV 檔案路徑。
+- `--test_data`：測試資料 CSV 檔案路徑。
+- `--target`：目標欄位名稱。
+- `--params`：手動訓練參數（JSON 格式，例如 `{"ntrees": 100}`）。
+- `--max_runtime`：AutoML 模型最大執行時間（秒）。
+- `--model_id`：模型識別碼，用於預測或解釋模式時指定模型。
+- `--explain`：若加上此參數，則在預測後進行深度解釋。
+
+### 使用範例
+
+#### 範例一：完整流程（訓練 → 預測 → 深度解釋）
 
 ```bash
-pip install -r requirements.txt
+python examples/h2o_agent/main.py --mode full --method automl --train_data path/to/train.csv --test_data path/to/test.csv --target target_column --explain
 ```
 
-> 若無 `requirements.txt`，請手動安裝以下套件：
->
+#### 範例二：僅進行模型訓練（手動模式）
+
 ```bash
-pip install h2o transformers dotenv argparse json logging
+python examples/h2o_agent/main.py --mode train --method manual --train_data path/to/train.csv --target target_column --params '{"ntrees": 100}'
 ```
 
-### 2. 設定環境變數
+#### 範例三：僅進行預測，並自動生成深度解釋
 
-在專案根目錄建立 `.env` 檔案，並設定 Hugging Face Token（如有需要）：
-```ini
-HF_TOKEN=your_huggingface_token
-```
-
-## 使用方式
-### 1. 完整流程（訓練 → 預測 → 解釋）
 ```bash
-python main.py --mode full --train_data train.csv --test_data test.csv --target label --method automl --max_runtime 3600 --explain
+python examples/h2o_agent/main.py --mode predict --test_data path/to/test.csv --model_id your_model_id --explain
 ```
 
-### 2. 只進行模型訓練
+#### 範例四：僅生成深度解釋
+
 ```bash
-python main.py --mode train --train_data train.csv --target label --method manual --params '{"ntrees": 100, "max_depth": 5}'
+python examples/h2o_agent/main.py --mode explain --test_data path/to/test.csv --model_id your_model_id
 ```
 
-### 3. 只進行預測
-```bash
-python main.py --mode predict --model_id model_12345 --test_data test.csv
-```
+## 模組說明
+### H2OAgent
+位於 `agents/h2o_agent.py` 的 `H2OAgent` 類別封裝了 H2O‑3 的操作，包括：   
+- 載入 CSV 檔案並轉換為 H2OFrame。   
+- 利用 H2OAutoML 進行自動模型訓練。   
+- 使用 H2OGradientBoostingEstimator 或 H2ORandomForestEstimator 進行手動模型訓練。   
+- 根据新資料進行預測並產生 pandas.DataFrame 格式的結果。   
+- 提供基礎模型解釋（如特徵重要性）。   
 
-### 4. 只進行解釋
-```bash
-python main.py --mode explain --model_id model_12345 --test_data test.csv
-```
+### `h2o_explain_tool` 與 DeepSeek
+- **`h2o_explain_tool`**  
+  位於 `tools/h2o_explain_tool.py`，此工具透過 DeepSeek‑R1 生成針對模型預測結果的詳細原因解釋，並使用 `@tool` 裝飾器（來自 smolagents）作為接口。
 
-## 參數說明
-| 參數 | 說明 | 必要性 |
-|------|------|--------|
-| `--mode` | 指定執行模式 (`full`, `train`, `predict`, `explain`) | 必填 |
-| `--train_data` | 訓練數據 CSV 檔案 | `train` 或 `full` 必填 |
-| `--test_data` | 預測數據 CSV 檔案 | `predict`, `explain`, `full` 必填 |
-| `--target` | 目標欄位名稱 | `train` 或 `full` 必填 |
-| `--method` | 訓練方法 (`automl` 或 `manual`) | `train` 或 `full` 適用 |
-| `--params` | 手動訓練參數（JSON 格式） | `manual` 訓練模式時適用 |
-| `--max_runtime` | AutoML 訓練時間上限（秒） | `automl` 訓練模式時適用 |
-| `--model_id` | 指定已訓練模型的 ID | `predict` 或 `explain` 模式必填 |
-| `--explain` | 是否進行預測結果解釋 | `full` 模式可選 |
-| `--max_tokens` | 解釋時最大 token 數 | 預設 256 |
-
-## H2O 與 DeepSeek-R1
-### H2O-3
-H2O 是一個開源的機器學習平台，支援 AutoML 以及手動設定模型參數。
-
-### DeepSeek-R1
-DeepSeek-R1 是一款自然語言處理 (NLP) 模型，能夠基於模型輸出生成人類可讀的解釋。
+- **DeepSeek**  
+  位於 `tools/deepseek.py`，封裝了 DeepSeek‑R1 的推理功能，使用 Hugging Face 的 transformers 完成預測解釋文字的生成。
 
 ## 注意事項
-- **H2O-3 需要 Java 環境**，請確保安裝了 Java 8 或以上版本。
-- **DeepSeek-R1 需要 Hugging Face Token**，如未設定可能無法下載模型。
-- 訓練數據與測試數據需為 **CSV 格式**，並確保目標欄位名稱一致。
+- 執行結束後，程式會自動關閉 H2O 群集以釋放資源。
+- 請確保所提供的 CSV 資料路徑正確，並檢查資料格式是否符合 H2O 的要求。
+- 若使用 DeepSeek‑R1 生成解釋，請確認網路連線狀況良好，並已正確下載所需模型。
 
-## 參考資料
-- [H2O 官方文件](https://docs.h2o.ai/h2o/latest-stable/h2o-docs/)
-- [DeepSeek AI](https://huggingface.co/deepseek-ai)
+## 常見問題
+1. **資料載入失敗**  
+   請確認資料檔案路徑正確，且 CSV 格式無誤。
+
+2. **模型訓練或預測出現錯誤**  
+   請檢查命令列參數是否齊全，並參考日誌訊息進行除錯。
+
+3. **深度解釋結果不如預期**  
+   可調整 `--explain` 模式下的 `max_tokens` 參數，或確認 DeepSeek‑R1 模型是否正確下載與初始化。
+
+## 授權條款
+本專案遵循 MIT 授權條款，詳情請參閱 LICENSE 檔案。
 
 ---
-本專案旨在提供高效且易用的機器學習流程，適合資料科學家與開發者快速部署模型並進行解釋分析。
 
+如有任何問題或建議，歡迎提出 Issue 或聯絡專案維護者。
+```
