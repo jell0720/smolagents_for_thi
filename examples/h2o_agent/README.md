@@ -12,46 +12,31 @@
 ## 程式架構圖
 
 ```mermaid
-graph TD
-  subgraph CLI Script
-    A[main.py<br/>(命令列入口)]
-    B[run_full_integration.py<br/>(整合流程)]
-    C[run_h2o.py<br/>(單純預測)]
-    D[run_h2o_automl.py<br/>(AutoML 與工具整合)]
+flowchart TD
+ subgraph CLI_Script["CLI_Script"]
+        A["main.py - 命令列入口"]
+        B["run_full_integration.py - 整合流程"]
+        C["run_h2o.py - 單純預測"]
+        D["run_h2o_automl.py - AutoML 與工具整合"]
   end
-
-  subgraph Core Modules
-    E[H2OAgent<br/>(agents/h2o_agent.py)]
-    F[h2o_explain_tool<br/>(tools/h2o_explain_tool.py)]
+ subgraph Core_Modules["Core_Modules"]
+        E["H2OAgent - agents/h2o_agent.py"]
+        F["h2o_explain_tool - tools/h2o_explain_tool.py"]
   end
-
-  subgraph Utility & 外部套件
-    G[dotenv<br/>(環境變數)]
-    H[argparse, logging, json<br/>(指令解析與紀錄)]
-    I[H2O‑3 Library]
-    J[LiteLLM / DeepSeek‑R1<br/>(生成解釋)]
-    K[smolagents<br/>(工具包與多步驟流程)]
+ subgraph Utility_External["Utility_External"]
+        G["dotenv - 環境變數"]
+        H["argparse, logging, json - 指令解析與紀錄"]
+        I["H2O-3 Library"]
+        J["LiteLLM / DeepSeek-R1 - 生成解釋"]
+        K["smolagents - 工具包與多步驟流程"]
   end
+    A --> H & G & E & F
+    B --> E & K & F
+    C --> E
+    D --> E & K
+    E --> I
+    F --> J & K
 
-  %% 入口層與工具
-  A --> H
-  A --> G
-  A --> E
-  A --> F
-
-  B --> E
-  B --> K
-  B --> F
-
-  C --> E
-
-  D --> E
-  D --> K
-
-  %% 核心模組與外部套件連接
-  E --> I
-  F --> J
-  F --> K
 ```
 
 ## 目錄結構
