@@ -1,137 +1,86 @@
-           # 端到端自動化 AI 工作流程
-## 整合 H2O‑3、DeepSeek‑R1 與 smolagents
+# H2O & DeepSeek-R1 端到端整合
 
-## 1. 環境設定
+## 簡介
+本專案提供了一個端到端的機器學習解決方案，結合了 **H2O-3**（AutoML 或手動訓練）與 **DeepSeek-R1**（自然語言解釋），可用於數據建模、預測以及模型結果解釋。
 
-* **建立虛擬環境**：建議使用 `venv` 或 `conda` 來隔離專案依賴。
-* **安裝必要套件：**
+## 功能
+- **完整流程 (full)**：執行模型訓練 → 預測 → 結果解釋
+- **模型訓練 (train)**：使用 AutoML 或手動設定參數訓練模型
+- **模型預測 (predict)**：使用已訓練的模型進行預測
+- **預測結果解釋 (explain)**：利用 DeepSeek-R1 模型為預測結果生成自然語言解釋
+
+## 環境設定
+### 1. 安裝 Python 依賴套件
+請確保您的環境安裝了 **Python 3.8+**，並使用以下指令安裝必要的套件：
 
 ```bash
-pip install h2o smolagents transformers huggingface_hub
+pip install -r requirements.txt
 ```
 
-* **套件說明：**
-  - `h2o`：分散式模型訓練與預測。
-  - `transformers`：載入 DeepSeek‑R1 本地推理模型。
-  - `smolagents`：封裝 Agent 以實現多步驟自動化流程。
+> 若無 `requirements.txt`，請手動安裝以下套件：
+>
+```bash
+pip install h2o transformers dotenv argparse json logging
+```
 
-* **取得 Hugging Face API Token**：若使用 Hugging Face API，請設定環境變數 `HF_TOKEN`。
+### 2. 設定環境變數
+
+在專案根目錄建立 `.env` 檔案，並設定 Hugging Face Token（如有需要）：
+```ini
+HF_TOKEN=your_huggingface_token
+```
+
+## 使用方式
+### 1. 完整流程（訓練 → 預測 → 解釋）
+```bash
+python main.py --mode full --train_data train.csv --test_data test.csv --target label --method automl --max_runtime 3600 --explain
+```
+
+### 2. 只進行模型訓練
+```bash
+python main.py --mode train --train_data train.csv --target label --method manual --params '{"ntrees": 100, "max_depth": 5}'
+```
+
+### 3. 只進行預測
+```bash
+python main.py --mode predict --model_id model_12345 --test_data test.csv
+```
+
+### 4. 只進行解釋
+```bash
+python main.py --mode explain --model_id model_12345 --test_data test.csv
+```
+
+## 參數說明
+| 參數 | 說明 | 必要性 |
+|------|------|--------|
+| `--mode` | 指定執行模式 (`full`, `train`, `predict`, `explain`) | 必填 |
+| `--train_data` | 訓練數據 CSV 檔案 | `train` 或 `full` 必填 |
+| `--test_data` | 預測數據 CSV 檔案 | `predict`, `explain`, `full` 必填 |
+| `--target` | 目標欄位名稱 | `train` 或 `full` 必填 |
+| `--method` | 訓練方法 (`automl` 或 `manual`) | `train` 或 `full` 適用 |
+| `--params` | 手動訓練參數（JSON 格式） | `manual` 訓練模式時適用 |
+| `--max_runtime` | AutoML 訓練時間上限（秒） | `automl` 訓練模式時適用 |
+| `--model_id` | 指定已訓練模型的 ID | `predict` 或 `explain` 模式必填 |
+| `--explain` | 是否進行預測結果解釋 | `full` 模式可選 |
+| `--max_tokens` | 解釋時最大 token 數 | 預設 256 |
+
+## H2O 與 DeepSeek-R1
+### H2O-3
+H2O 是一個開源的機器學習平台，支援 AutoML 以及手動設定模型參數。
+
+### DeepSeek-R1
+DeepSeek-R1 是一款自然語言處理 (NLP) 模型，能夠基於模型輸出生成人類可讀的解釋。
+
+## 注意事項
+- **H2O-3 需要 Java 環境**，請確保安裝了 Java 8 或以上版本。
+- **DeepSeek-R1 需要 Hugging Face Token**，如未設定可能無法下載模型。
+- 訓練數據與測試數據需為 **CSV 格式**，並確保目標欄位名稱一致。
+
+## 參考資料
+- [H2O 官方文件](https://docs.h2o.ai/h2o/latest-stable/h2o-docs/)
+- [DeepSeek AI](https://huggingface.co/deepseek-ai)
 
 ---
-
-## 2. H2O‑3 模型訓練與預測
-
-### 初始化 H2O 與讀取資料
-
-```python
-import h2o
-h2o.init()
-
-data = h2o.import_file("your_data.csv")
-train, test = data.split_frame(ratios=[0.8], seed=123)
-```
-
-### 使用 H2O AutoML 進行訓練
-
-```python
-from h2o.automl import H2OAutoML
-
-x = data.columns
-y = "target_column"  # 根據實際情況修改
-x.remove(y)
-
-aml = H2OAutoML(max_runtime_secs=300, seed=1)
-aml.train(x=x, y=y, training_frame=train)
-
-best_model = aml.leader
-predictions = best_model.predict(test)
-```
-
-### 取得預測結果
-
-```python
-pred_result = predictions.as_data_frame().iloc[0]["predict"]
-```
-
----
-
-## 3. 撰寫 DeepSeek‑R1 本地推理函式
-
-### 載入模型與 Tokenizer
-
-```python
-from transformers import AutoModelForCausalLM, AutoTokenizer
-
-model_name = "deepseek-ai/DeepSeek-R1-Distill"
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-deepseek_model = AutoModelForCausalLM.from_pretrained(model_name)
-```
-
-### 定義推理函式
-
-```python
-def deepseek_inference(prompt, max_tokens=256):
-    inputs = tokenizer(prompt, return_tensors="pt")
-    outputs = deepseek_model.generate(**inputs, max_new_tokens=max_tokens)
-    result = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    return result
-```
-
----
-
-## 4. 利用 smolagents 封裝代理
-
-### 建立自訂工具整合 H2O 預測結果與 DeepSeek 推理
-
-```python
-from smolagents import tool
-
-@tool
-def h2o_explain_tool(prediction: str) -> str:
-    """
-    利用 DeepSeek‑R1 對 H2O‑3 的預測結果進行推理解釋。
-    """
-    explanation_prompt = f"請根據預測結果 '{prediction}'，提供詳細的原因分析與解釋。"
-    explanation = deepseek_inference(explanation_prompt, max_tokens=300)
-    return explanation
-```
-
-### 建立 CodeAgent 並整合工具
-
-```python
-from smolagents import CodeAgent, HfApiModel
-
-model_agent = HfApiModel()
-
-agent = CodeAgent(
-    tools=[h2o_explain_tool],
-    model=model_agent,
-    additional_authorized_imports=["requests"]
-)
-
-task_prompt = f"H2O 預測結果為：{pred_result}，請提供詳細的解釋與可能的影響分析。"
-final_explanation = agent.run(task_prompt)
-print("最終解釋：", final_explanation)
-```
-
----
-
-## 5. 工作流程總結
-
-* **環境設定**：安裝並初始化 H2O‑3、DeepSeek‑R1 與 smolagents。
-* **H2O‑3 模型訓練與預測**：進行資料處理、模型訓練與預測，獲得初步結果。
-* **DeepSeek‑R1 推理**：根據預測結果生成深度解釋或補充報告。
-* **smolagents 封裝代理**：整合流程，使其具備自動化與多步驟推理能力。
-
----
-
-## 參考資源
-
-* [H2O‑3 官方文件](https://docs.h2o.ai/)
-* [HuggingFace smolagents 官方文件](https://huggingface.co/docs/smolagents)
-* [DeepSeek‑R1 模型 GitHub 倉庫](https://github.com/deepseek-ai)
-
----
-
-透過上述步驟與程式碼範例，即可開始嘗試整合 H2O‑3、DeepSeek‑R1 與 smolagents，建立端到端自動化 AI 系統。
+本專案旨在提供高效且易用的機器學習流程，適合資料科學家與開發者快速部署模型並進行解釋分析。
 
