@@ -5,8 +5,7 @@
 已棄用 deepseek.py，改用 litellm 作為生成引擎。
 """
 
-from smolagents import tool
-from litellm import LiteLLMModel
+from smolagents import tool,LiteLLMModel
 import os
 
 @tool

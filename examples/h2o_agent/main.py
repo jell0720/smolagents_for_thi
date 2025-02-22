@@ -10,6 +10,7 @@
 訓練模式（自動化或手動）、模型 ID 以及是否進行深度解釋等。
 """
 
+import os
 import argparse
 import json
 import logging
@@ -17,7 +18,7 @@ from dotenv import load_dotenv
 import h2o
 
 from agents.h2o_agent import H2OAgent
-
+os.environ["JAVA_HOME"] = "/Volumes/Predator/Users/jell/.sdkman/candidates/java/17.0.7-tem"
 
 def get_first_prediction(predict_df):
     """

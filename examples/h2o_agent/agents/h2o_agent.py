@@ -6,7 +6,8 @@
 import h2o
 import logging
 import pandas as pd
-from h2o.estimators import H2OAutoML, H2OGradientBoostingEstimator, H2ORandomForestEstimator
+from h2o.estimators import H2OGradientBoostingEstimator, H2ORandomForestEstimator
+from h2o.automl import H2OAutoML
 
 class H2OAgent:
     def __init__(self):
