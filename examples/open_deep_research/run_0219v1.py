@@ -104,16 +104,11 @@ BROWSER_CONFIG = {
 # 若下載資料夾不存在，則建立之
 os.makedirs(f"./{BROWSER_CONFIG['downloads_folder']}", exist_ok=True)
 
-# 定義 final_answer 工具，當模型呼叫時返回最終答案
-# def final_answer(result):
-#     print("最終答案：")
-#     print(result)
-
 def main():
     args = parse_args()
     text_limit = 100000  # 文字內容上限限制
     litellm.log_raw_request_response = True
-    litellm.drop_params = True
+    # litellm.drop_params = True
     # 若需要調試，可啟用下行
     # litellm._turn_on_debug()
 
@@ -123,7 +118,7 @@ def main():
         args.api_key,
         custom_role_conversions=custom_role_conversions,
         max_completion_tokens=8192,
-        reasoning_effort="high",
+        # reasoning_effort="high",
     )
     document_inspection_tool = TextInspectorTool(model, text_limit)
     browser = SimpleTextBrowser(**BROWSER_CONFIG)
