@@ -14,7 +14,7 @@ import logging
 import warnings
 
 from smolagents import tool  # 使用 smolagents 提供的工具裝飾器
-from h2o_agent import H2OAgent
+from agents.h2o_agent import H2OAgent
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
 

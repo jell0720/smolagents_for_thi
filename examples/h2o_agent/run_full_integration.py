@@ -19,7 +19,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from smolagents import tool, CodeAgent, HfApiModel
 
 # 載入自訂的 H2O 代理人 (請確保 h2o_agent.py 與 h2o_tool.py 均已建立)
-from h2o_agent import H2OAgent
+from agents.h2o_agent import H2OAgent
 
 # 載入環境變數 (例如 .env 中可能設定 hf_token 等參數)
 load_dotenv(override=True)

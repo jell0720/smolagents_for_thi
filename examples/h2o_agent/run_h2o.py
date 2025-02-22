@@ -10,7 +10,7 @@ import json
 from dotenv import load_dotenv
 import h2o
 
-from h2o_agent import H2OAgent
+from agents.h2o_agent import H2OAgent
 
 # 載入環境變數 (若 .env 中有相關設定)
 load_dotenv(override=True)
