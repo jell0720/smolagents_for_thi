@@ -104,6 +104,26 @@ BROWSER_CONFIG = {
 # 若下載資料夾不存在，則建立之
 os.makedirs(f"./{BROWSER_CONFIG['downloads_folder']}", exist_ok=True)
 
+def validate_tool_call(tool_call):
+    """驗證工具呼叫的格式是否正確"""
+    if not isinstance(tool_call, dict):
+        return False
+    required_fields = ['name', 'arguments']
+    return all(field in tool_call for field in required_fields)
+
+# 在 manager_agent 初始化後添加
+def custom_tool_parser(output: str) -> dict:
+    """自定義工具呼叫解析器"""
+    try:
+        # 解析輸出中的工具呼叫
+        tool_call = parse_json_tool_call(output)
+        if validate_tool_call(tool_call):
+            return tool_call
+        return None
+    except Exception as e:
+        print(f"工具呼叫解析錯誤: {str(e)}")
+        return None
+
 def main():
     args = parse_args()
     text_limit = 100000  # 文字內容上限限制
@@ -118,7 +138,8 @@ def main():
         args.api_key,
         custom_role_conversions=custom_role_conversions,
         max_completion_tokens=8192,
-        # reasoning_effort="high",
+        temperature=0.6,  # 降低溫度以獲得更確定的輸出
+        stop_sequences=["```", "Observation:", "<end_code>"],  # 添加明確的停止序列
     )
     document_inspection_tool = TextInspectorTool(model, text_limit)
     browser = SimpleTextBrowser(**BROWSER_CONFIG)
@@ -149,12 +170,23 @@ def main():
         """,
         provide_run_summary=True,
     )
+    # 確保 'task' 欄位已初始化
+    if text_webbrowser_agent.prompt_templates["managed_agent"].get("task") is None:
+        text_webbrowser_agent.prompt_templates["managed_agent"]["task"] = ""
+
     text_webbrowser_agent.prompt_templates["managed_agent"]["task"] += """You can navigate to .txt online files.
         If a non-html page is in another format, especially .pdf or a Youtube video, use tool 'inspect_file_as_text' to inspect it.
         Additionally, if after some searching you find out that you need more information to answer the question, you can use final_answer with your request for clarification as argument to request for more information."""
 
     # 在管理代理人的描述中，強調最終必須呼叫 final_answer 返回結果
-    manager_description = ""
+    manager_description = (
+        "你是一個協調管理者，負責指導其他子代理人從網路上蒐集資訊、分析數據，並在所有工具操作完成後生成最終答案。"
+        "在過程中，請仔細檢查每個步驟的回應，確保資訊正確且完整，並在發現不一致或有疑慮時及時請求更多資料。"
+        "你的目標是最後匯整出一個詳盡、可信的最終答案。"
+    )
+
+    print("Managed agent task template:", text_webbrowser_agent.prompt_templates.get("managed_agent"))
+    print("manager_description:", manager_description)
 
     manager_agent = CodeAgent(
         model=model,
@@ -166,6 +198,9 @@ def main():
         managed_agents=[text_webbrowser_agent],
         description=manager_description,
     )
+
+    # 將自定義解析器添加到 manager_agent
+    manager_agent.tool_parser = custom_tool_parser
 
     if args.question is None:
         args.question = "請提供一個問題"

@@ -91,6 +91,8 @@ class SimpleTextBrowser:
 
     def _set_page_content(self, content: str) -> None:
         """Sets the text content of the current page."""
+        if content is None:
+            content = ""
         self._page_content = content
         self._split_pages()
         if self.viewport_current_page >= len(self.viewport_pages):

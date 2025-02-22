@@ -74,49 +74,56 @@ This tool handles the following file extensions: [".html", ".htm", ".xlsx", ".pp
         return self.model(messages).content
 
     def forward(self, file_path, question: Optional[str] = None) -> str:
-        result = self.md_converter.convert(file_path)
+        try:
+            # 檢查輸入參數
+            if file_path is None:
+                return "錯誤：未提供檔案路徑"
+            
+            result = self.md_converter.convert(file_path)
+            
+            # 檢查轉換結果
+            if result is None or result.text_content is None:
+                return "無法讀取文件內容。請確認文件格式是否支援。"
 
-        if file_path[-4:] in [".png", ".jpg"]:
-            raise Exception("Cannot use inspect_file_as_text tool with images: use visualizer instead!")
+            if file_path[-4:] in [".png", ".jpg"]:
+                raise Exception("Cannot use inspect_file_as_text tool with images: use visualizer instead!")
 
-        if ".zip" in file_path:
-            return result.text_content
+            if ".zip" in file_path:
+                return result.text_content
 
-        if not question:
-            return result.text_content
+            if not question:
+                return result.text_content
 
-        messages = [
-            {
-                "role": MessageRole.SYSTEM,
-                "content": [
-                    {
-                        "type": "text",
-                        "text": "You will have to write a short caption for this file, then answer this question:"
-                        + question,
-                    }
-                ],
-            },
-            {
-                "role": MessageRole.USER,
-                "content": [
-                    {
-                        "type": "text",
-                        "text": "Here is the complete file:\n### "
-                        + str(result.title)
-                        + "\n\n"
-                        + result.text_content[: self.text_limit],
-                    }
-                ],
-            },
-            {
-                "role": MessageRole.USER,
-                "content": [
-                    {
-                        "type": "text",
-                        "text": "Now answer the question below. Use these three headings: '1. Short answer', '2. Extremely detailed answer', '3. Additional Context on the document and question asked'."
-                        + question,
-                    }
-                ],
-            },
-        ]
-        return self.model(messages).content
+            messages = [
+                {
+                    "role": MessageRole.SYSTEM,
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "Here is the complete file:\n### "
+                            + str(result.title)
+                            + "\n\n"
+                            + result.text_content[: self.text_limit],
+                        }
+                    ],
+                },
+                {
+                    "role": MessageRole.USER,
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "Now answer the question below. Use these three headings: '1. Short answer', '2. Extremely detailed answer', '3. Additional Context on the document and question asked'."
+                            + question,
+                        }
+                    ],
+                },
+            ]
+            
+            try:
+                response = self.model(messages)
+                return response.content
+            except Exception as e:
+                return f"模型回應錯誤: {str(e)}"
+            
+        except Exception as e:
+            return f"處理文件時發生錯誤: {str(e)}"
