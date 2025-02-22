@@ -70,6 +70,9 @@ login(os.getenv("HF_TOKEN"))
 # 建立線程鎖，避免多線程時資料衝突
 append_answer_lock = threading.Lock()
 
+# 在主程式開始處添加這行，告訴 litellm 忽略不支援的參數
+litellm.drop_params = True
+
 def parse_args():
     parser = argparse.ArgumentParser()
     # 必填參數：使用者問題，例如：「Mercedes Sosa 在2007年前發行了多少張錄音室專輯？」
@@ -128,7 +131,6 @@ def main():
     args = parse_args()
     text_limit = 100000  # 文字內容上限限制
     litellm.log_raw_request_response = True
-    # litellm.drop_params = True
     # 若需要調試，可啟用下行
     # litellm._turn_on_debug()
 
