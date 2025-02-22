@@ -22,6 +22,7 @@ from smolagents import (
     CodeAgent,         # 程式碼代理人
     LiteLLMModel,      # 輕量型語言模型代理
     ToolCallingAgent,  # 工具呼叫代理人
+    OpenAIServerModel,
 )
 
 # 指定模板檔案路徑
@@ -144,6 +145,14 @@ def main():
         temperature=0.6,  # 降低溫度以獲得更確定的輸出
         stop=["```", "Observation:", "<end_code>"],  # 添加明確的停止序列
     )
+    tool_model = LiteLLMModel(
+        model_id= "openai/Meta-Llama-3-1-405B-Instruct-FP8", # this is 'openai/gpt-4o' in my testing
+        api_base= "https://chatapi.akash.network/api/v1/",
+        api_key= "sk-Q2ySzfb136R6q2Esnf0shg",
+        custom_role_conversions=custom_role_conversions,
+        max_completion_tokens=16000,
+    )
+
     document_inspection_tool = TextInspectorTool(model, text_limit)
     browser = SimpleTextBrowser(**BROWSER_CONFIG)
 
@@ -159,7 +168,7 @@ def main():
     ]
 
     text_webbrowser_agent = ToolCallingAgent(
-        model=model,
+        model=tool_model,
         tools=WEB_TOOLS,
         max_steps=20,
         verbosity_level=2,
