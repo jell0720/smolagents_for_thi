@@ -1,11 +1,13 @@
 # H2O 與 DeepSeek-R1 端到端機器學習解決方案
 
 ## 簡介
+
 本專案整合了 H2O‑3 與輕量型語言模型（LiteLLM），提供一個端到端的機器學習流程，包含以下模式：
+
 - **full** : 完整流程（訓練 → 預測 → （可選）深度解釋）
 - **train** : 僅進行模型訓練
 - **predict** : 僅進行預測
-- **explain** : 僅針對預測結果產生深度解釋
+- **explain** : 僅針對預測結果產生深度解釋0
 
 使用者可以藉由命令列參數自由設定流程、資料路徑、目標欄位與訓練參數，並可根據需求採用自動化（AutoML）或手動模式進行模型訓練。此外，當啟用深度解釋功能時，系統將利用 LiteLLM 提供詳細的預測解釋。
 
@@ -52,10 +54,12 @@ examples/h2o_agent/
 ```
 
 ## 環境要求
+
 - Python 3.7 或更新版本
 - 必要套件：`h2o`、`python-dotenv`、`transformers`、`smolagents`、`litellm`
 
 ## 安裝與設定
+
 1. **建立與啟動虛擬環境**
 
    ```bash
@@ -65,32 +69,31 @@ examples/h2o_agent/
    # Windows
    venv\Scripts\activate
    ```
-
 2. **安裝依賴套件**
 
    ```bash
    pip install h2o python-dotenv transformers smolagents litellm
    ```
+3. **設定環境變數（可選）**若使用深度解釋功能，請在專案根目錄建立 `.env` 檔案，並設定下列環境變數：
 
-3. **設定環境變數（可選）**  
-   若使用深度解釋功能，請在專案根目錄建立 `.env` 檔案，並設定下列環境變數：
    - `LLM_API_BASE`：輕量型語言模型 API 的基本網址
    - `LLM_API_KEY`：API 金鑰
    - `LLM_MODEL_ID`：預設模型識別碼（預設為 `gpt-3.5-turbo`）
 
 ## 使用方法
+
 本程式透過命令列參數決定執行模式與相關設定。主要參數說明如下：
 
 - `--mode`：選擇執行模式：
+
   - `full`：完整流程（訓練 → 預測 → （可選）深度解釋）。
   - `train`：僅進行模型訓練。
   - `predict`：僅進行預測。
   - `explain`：僅針對現有預測結果產生深度解釋。
-
 - `--method`：定義訓練模式：
+
   - `automl`：使用 H2OAutoML 進行自動化訓練。
   - `manual`：使用手動參數設定，預設採用 GBM 模型（如需其他算法，可自行擴充）。
-
 - `--train_data`：訓練資料 CSV 檔案路徑。
 - `--test_data`：測試資料 CSV 檔案路徑。
 - `--target`：目標欄位名稱。
@@ -126,6 +129,5 @@ python examples/h2o_agent/main.py --mode explain --test_data path/to/test.csv --
 ```
 
 ## 授權條款
+
 本專案遵循 MIT 授權條款，詳情請參閱 LICENSE 檔案。
-
-
