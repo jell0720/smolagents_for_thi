@@ -140,8 +140,9 @@ def main():
         args.api_key,
         custom_role_conversions=custom_role_conversions,
         max_completion_tokens=8192,
+        num_ctx=4096,
         temperature=0.6,  # 降低溫度以獲得更確定的輸出
-        stop_sequences=["```", "Observation:", "<end_code>"],  # 添加明確的停止序列
+        stop=["```", "Observation:", "<end_code>"],  # 添加明確的停止序列
     )
     document_inspection_tool = TextInspectorTool(model, text_limit)
     browser = SimpleTextBrowser(**BROWSER_CONFIG)
