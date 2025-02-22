@@ -1,0 +1,4 @@
+{{ user_input }}
+{% for message in chat_history %}
+  {{ message.role }}: {{ message.content }}
+{% endfor %}

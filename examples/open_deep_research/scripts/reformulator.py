@@ -1,6 +1,7 @@
 # Shamelessly stolen from Microsoft Autogen team: thanks to them for this great resource!
 # https://github.com/microsoft/autogen/blob/gaia_multiagent_v01_march_1st/autogen/browser_utils.py
 import copy
+import re
 
 from smolagents.models import MessageRole, Model
 
@@ -64,7 +65,9 @@ If you are unable to determine the final answer, output 'FINAL ANSWER: Unable to
 
     response = reformulation_model(messages).content
 
-    final_answer = response.split("FINAL ANSWER: ")[-1].strip()
+    # 使用正則表達式較為健全地擷取最終答案
+    final_answer_match = re.search(r"FINAL ANSWER:\s*(.*)", response, re.IGNORECASE)
+    final_answer = final_answer_match.group(1).strip() if final_answer_match else "Unable to determine"
     print("> Reformulated answer: ", final_answer)
 
     #     if "unable to determine" in final_answer.lower():

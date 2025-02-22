@@ -70,8 +70,6 @@ login(os.getenv("HF_TOKEN"))
 # 建立線程鎖，避免多線程時資料衝突
 append_answer_lock = threading.Lock()
 
-import os  # 重複導入 os（可視需要保留或移除）
-
 def parse_args():
     parser = argparse.ArgumentParser()
     # 必填參數：使用者問題，例如：「Mercedes Sosa 在2007年前發行了多少張錄音室專輯？」
