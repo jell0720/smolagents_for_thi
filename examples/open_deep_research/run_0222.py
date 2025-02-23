@@ -1,6 +1,7 @@
 import argparse  # 用來解析命令列參數
 import os  # 處理作業系統相關功能
 import threading  # 用於線程鎖，避免多線程時資料衝突
+import json  # 添加 json 模組引入
 
 import litellm  # 輕量型語言模型工具
 from dotenv import load_dotenv  # 載入環境變數檔案
@@ -115,7 +116,28 @@ def validate_tool_call(tool_call):
     required_fields = ['name', 'arguments']
     return all(field in tool_call for field in required_fields)
 
-# 在 manager_agent 初始化後添加
+def parse_json_tool_call(output: str) -> dict:
+    """解析輸出中的 JSON 格式工具呼叫
+    
+    Args:
+        output (str): 包含工具呼叫的輸出字串
+        
+    Returns:
+        dict: 解析後的工具呼叫字典，若解析失敗則返回 None
+    """
+    try:
+        # 尋找 JSON 格式的工具呼叫
+        start_idx = output.find('{')
+        end_idx = output.rfind('}')
+        
+        if start_idx == -1 or end_idx == -1:
+            return None
+            
+        json_str = output[start_idx:end_idx + 1]
+        return json.loads(json_str)
+    except json.JSONDecodeError:
+        return None
+
 def custom_tool_parser(output: str) -> dict:
     """自定義工具呼叫解析器"""
     try:
@@ -148,7 +170,7 @@ def main():
     tool_model = LiteLLMModel(
         model_id= "openai/Meta-Llama-3-1-405B-Instruct-FP8", # this is 'openai/gpt-4o' in my testing
         api_base= "https://chatapi.akash.network/api/v1/",
-        api_key= "sk-Q2ySzfb136R6q2Esnf0shg",
+        api_key= "",
         custom_role_conversions=custom_role_conversions,
         max_completion_tokens=16000,
     )
