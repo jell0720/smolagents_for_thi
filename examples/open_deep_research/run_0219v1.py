@@ -1,6 +1,6 @@
 import argparse  # 用來解析命令列參數
 import os  # 處理作業系統相關功能
-ol  # 用於線程鎖，避免多線程時資料衝突
+import threading  # 用於線程鎖，避免多線程時資料衝突
 
 import litellm  # 輕量型語言模型工具
 from dotenv import load_dotenv  # 載入環境變數檔案
